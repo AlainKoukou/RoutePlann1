@@ -33,7 +33,10 @@ class RouteHistoryAdapter(
     override fun onBindViewHolder(holder: RouteViewHolder, position: Int) {
         val route = items[position]
 
-        holder.tvRouteTitle.text = "${route.origin}  →  ${route.destination}"
+        // NEW: prefer friendly names, fall back to coords
+        val originDisplay = route.originName ?: route.origin
+        val destDisplay = route.destinationName ?: route.destination
+        holder.tvRouteTitle.text = "$originDisplay  →  $destDisplay"
 
         val km = route.distanceMeters / 1000.0
         val min = route.durationSeconds / 60.0

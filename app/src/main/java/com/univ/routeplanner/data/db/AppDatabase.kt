@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [RouteEntity::class],
-    version = 1,
+    version = 2,                    // bumped from 1 to 2
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,7 +24,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "route_planner.db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()   // NEW
+                    .build()
                 INSTANCE = instance
                 instance
             }

@@ -12,4 +12,11 @@ interface OrsApiService {
         @Query("start") start: String,
         @Query("end") end: String
     ): RouteResponse
+    @GET("geocode/reverse")
+    suspend fun reverseGeocode(
+        @Query("api_key") apiKey: String,
+        @Query("point.lon") lon: Double,
+        @Query("point.lat") lat: Double,
+        @Query("size") size: Int = 1
+    ): GeocodeResponse
 }

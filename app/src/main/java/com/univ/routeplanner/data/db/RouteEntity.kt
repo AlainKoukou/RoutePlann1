@@ -8,10 +8,12 @@ data class RouteEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
-    val origin: String,           // "lng,lat"
-    val destination: String,      // "lng,lat"
+    val origin: String,
+    val destination: String,
+    val originName: String? = null,         // NEW
+    val destinationName: String? = null,    // NEW
     val distanceMeters: Double,
     val durationSeconds: Double,
-    val geometryJson: String,     // the full coordinates array, stored as JSON text
-    val fetchedAt: Long           // System.currentTimeMillis() when saved
+    val geometryJson: String,
+    val fetchedAt: Long
 )

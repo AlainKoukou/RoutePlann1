@@ -32,9 +32,15 @@ class RouteRepository(
             if (pt.size >= 2) Pair(pt[0], pt[1]) else null
         }
 
+        // Reverse-geocode both endpoints (fails gracefully if they can't be resolved)
+        val originName = reverseGeocodeSafely(origin)
+        val destinationName = reverseGeocodeSafely(destination)
+
         val entity = RouteEntity(
             origin = origin,
             destination = destination,
+            originName = originName,
+            destinationName = destinationName,
             distanceMeters = segment.distance,
             durationSeconds = segment.duration,
             geometryJson = geometryJson,
@@ -47,6 +53,8 @@ class RouteRepository(
             durationSeconds = segment.duration,
             origin = origin,
             destination = destination,
+            originName = originName,
+            destinationName = destinationName,
             source = "live API",
             geometry = geometryPairs
         )
@@ -70,6 +78,8 @@ class RouteRepository(
             durationSeconds = entity.durationSeconds,
             origin = entity.origin,
             destination = entity.destination,
+            originName = entity.originName,
+            destinationName = entity.destinationName,
             source = "offline cache",
             geometry = geometryPairs
         )
@@ -86,6 +96,51 @@ class RouteRepository(
     suspend fun clearCache() {
         dao.clearAll()
     }
+
+    /**
+     * Converts "lng,lat" coordinates into a human-readable place name.
+     * Returns null if the API call fails or no result is found — the caller
+     * should fall back to showing the raw coordinates.
+     */
+    private suspend fun reverseGeocodeSafely(coords: String): String? {
+        return try {
+            val parts = coords.split(",")
+
+            if (parts.size != 2) return null
+
+            val lon = parts[0].trim().toDoubleOrNull() ?: return null
+            val lat = parts[1].trim().toDoubleOrNull() ?: return null
+
+            val response = api.reverseGeocode(
+                apiKey = BuildConfig.ORS_API_KEY,
+                lon = lon,
+                lat = lat
+            )
+
+            val props = response.features
+                ?.firstOrNull()
+                ?.properties
+                ?: return null
+
+            val rawLabel = props.label
+                ?: listOfNotNull(
+                    props.name ?: props.locality,
+                    props.country
+                )
+                    .joinToString(", ")
+                    .takeIf { it.isNotBlank() }
+
+            rawLabel
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotBlank() }
+                ?.take(2)
+                ?.joinToString(", ")
+
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
 
 data class RouteResult(
@@ -93,6 +148,8 @@ data class RouteResult(
     val durationSeconds: Double,
     val origin: String,
     val destination: String,
+    val originName: String? = null,
+    val destinationName: String? = null,
     val source: String,
     val geometry: List<Pair<Double, Double>> = emptyList()
 )
