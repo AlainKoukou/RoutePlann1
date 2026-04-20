@@ -7,12 +7,18 @@ data class GeocodeResponse(
 )
 
 data class GeocodeFeature(
+    @SerializedName("geometry") val geometry: GeocodeGeometry?, // Added this line
     @SerializedName("properties") val properties: GeocodeProperties?
 )
 
+// Added this class to handle the [longitude, latitude] list
+data class GeocodeGeometry(
+    @SerializedName("coordinates") val coordinates: List<Double>?
+)
+
 data class GeocodeProperties(
-    @SerializedName("label") val label: String?,        // "Hamra, Beirut, Lebanon" — pre-built, preferred
-    @SerializedName("name") val name: String?,          // "Hamra" — just the main name
-    @SerializedName("locality") val locality: String?,  // "Beirut" — city
-    @SerializedName("country") val country: String?     // "Lebanon"
+    @SerializedName("label") val label: String?,
+    @SerializedName("name") val name: String?,
+    @SerializedName("locality") val locality: String?,
+    @SerializedName("country") val country: String?
 )

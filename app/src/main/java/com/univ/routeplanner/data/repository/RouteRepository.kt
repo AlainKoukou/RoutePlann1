@@ -2,22 +2,21 @@ package com.univ.routeplanner.data.repository
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.univ.routeplanner.BuildConfig
 import com.univ.routeplanner.data.api.OrsApiService
 import com.univ.routeplanner.data.api.RetrofitClient
 import com.univ.routeplanner.data.db.RouteDao
 import com.univ.routeplanner.data.db.RouteEntity
 
 class RouteRepository(
-    private val api: OrsApiService = RetrofitClient.api,
+    private val apiService: OrsApiService = RetrofitClient.api,
     private val dao: RouteDao
 ) {
 
     private val gson = Gson()
 
     suspend fun getRoute(origin: String, destination: String): RouteResult {
-        val response = api.getDrivingRoute(
-            apiKey = BuildConfig.ORS_API_KEY,
+        // Removed apiKey = BuildConfig.ORS_API_KEY because the Interceptor handles it now
+        val response = apiService.getDrivingRoute(
             start = origin,
             end = destination
         )
@@ -85,10 +84,6 @@ class RouteRepository(
         )
     }
 
-    /**
-     * Returns every saved route, newest first.
-     * Used by the History screen.
-     */
     suspend fun getAllHistory(): List<RouteEntity> {
         return dao.getAllRoutes()
     }
@@ -97,11 +92,6 @@ class RouteRepository(
         dao.clearAll()
     }
 
-    /**
-     * Converts "lng,lat" coordinates into a human-readable place name.
-     * Returns null if the API call fails or no result is found — the caller
-     * should fall back to showing the raw coordinates.
-     */
     private suspend fun reverseGeocodeSafely(coords: String): String? {
         return try {
             val parts = coords.split(",")
@@ -111,8 +101,8 @@ class RouteRepository(
             val lon = parts[0].trim().toDoubleOrNull() ?: return null
             val lat = parts[1].trim().toDoubleOrNull() ?: return null
 
-            val response = api.reverseGeocode(
-                apiKey = BuildConfig.ORS_API_KEY,
+            // Removed apiKey = BuildConfig.ORS_API_KEY here as well
+            val response = apiService.reverseGeocode(
                 lon = lon,
                 lat = lat
             )

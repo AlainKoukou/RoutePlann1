@@ -7,6 +7,7 @@ import android.graphics.PorterDuff
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.view.View
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -53,8 +54,8 @@ class MainActivity : AppCompatActivity() {
             if (!origin.isNullOrBlank() && !destination.isNullOrBlank()) {
                 viewModel.setCurrentLocation(origin)
                 binding.etDestination.setText(destination)
-                updateDestinationMarker(destination)
-                viewModel.fetchRoute(destination)
+                // If history returns coords, update marker. If it returns names, search.
+                handleDestinationInput(destination)
             }
         }
     }
@@ -85,7 +86,7 @@ class MainActivity : AppCompatActivity() {
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT)
 
             controller.setZoom(13.0)
-            controller.setCenter(GeoPoint(49.4149, 8.6842))
+            controller.setCenter(GeoPoint(33.8938, 35.5018)) // Default to Beirut center
         }
     }
 
@@ -106,11 +107,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnGetRoute.setOnClickListener {
-            val destination = binding.etDestination.text?.toString()?.trim().orEmpty()
-            if (destination.isNotBlank()) {
-                updateDestinationMarker(destination)
+            val input = binding.etDestination.text?.toString()?.trim().orEmpty()
+            if (input.isNotBlank()) {
+                handleDestinationInput(input)
+            } else {
+                Toast.makeText(this, "Please enter a destination", Toast.LENGTH_SHORT).show()
             }
-            viewModel.fetchRoute(destination)
         }
 
         binding.btnClearCache.setOnClickListener {
@@ -128,6 +130,28 @@ class MainActivity : AppCompatActivity() {
         binding.btnHistory.setOnClickListener {
             val intent = Intent(this, HistoryActivity::class.java)
             historyLauncher.launch(intent)
+        }
+    }
+
+    /**
+     * Decides whether to treat input as "Lat,Lng" or search as a "Name"
+     */
+    private fun handleDestinationInput(input: String) {
+        val isCoords = input.contains(",") && input.split(",").all { it.trim().toDoubleOrNull() != null }
+
+        if (isCoords) {
+            updateDestinationMarker(input)
+            viewModel.fetchRoute(input)
+        } else {
+            binding.tvStatus.text = "Searching for '$input'..."
+            viewModel.searchLocation(input) { coords ->
+                if (coords != null) {
+                    updateDestinationMarker(coords)
+                    viewModel.fetchRoute(coords)
+                } else {
+                    binding.tvStatus.text = "Location not found."
+                }
+            }
         }
     }
 
@@ -153,10 +177,8 @@ class MainActivity : AppCompatActivity() {
             }
             is RouteUiState.Loading -> {
                 binding.progressBar.visibility = View.VISIBLE
-                binding.tvStatus.text = ""
                 binding.tvDistance.text = "Distance: ..."
                 binding.tvDuration.text = "Duration: ..."
-                binding.tvSource.text = ""
             }
             is RouteUiState.Success -> {
                 binding.progressBar.visibility = View.GONE
@@ -179,7 +201,6 @@ class MainActivity : AppCompatActivity() {
                 binding.tvStatus.text = state.message
                 binding.tvDistance.text = "Distance: —"
                 binding.tvDuration.text = "Duration: —"
-                binding.tvSource.text = ""
             }
         }
     }
@@ -210,7 +231,6 @@ class MainActivity : AppCompatActivity() {
         val lat = parts[1].toDoubleOrNull() ?: return
 
         val point = GeoPoint(lat, lng)
-
         currentLocationMarker?.let { binding.mapView.overlays.remove(it) }
 
         val marker = Marker(binding.mapView).apply {
@@ -223,9 +243,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.mapView.overlays.add(marker)
         currentLocationMarker = marker
-
         binding.mapView.controller.animateTo(point)
-        binding.mapView.controller.setZoom(15.0)
         binding.mapView.invalidate()
     }
 
@@ -236,7 +254,6 @@ class MainActivity : AppCompatActivity() {
         val lat = parts[1].toDoubleOrNull() ?: return
 
         val point = GeoPoint(lat, lng)
-
         destinationMarker?.let { binding.mapView.overlays.remove(it) }
 
         val marker = Marker(binding.mapView).apply {
@@ -249,20 +266,17 @@ class MainActivity : AppCompatActivity() {
         }
         binding.mapView.overlays.add(marker)
         destinationMarker = marker
-
         binding.mapView.invalidate()
     }
 
     private fun drawRoute(geometry: List<Pair<Double, Double>>) {
         routePolyline?.let { binding.mapView.overlays.remove(it) }
-
         if (geometry.isEmpty()) {
             binding.mapView.invalidate()
             return
         }
 
         val points = geometry.map { (lng, lat) -> GeoPoint(lat, lng) }
-
         val polyline = Polyline().apply {
             setPoints(points)
             outlinePaint.color = android.graphics.Color.BLUE
@@ -275,7 +289,6 @@ class MainActivity : AppCompatActivity() {
         binding.mapView.post {
             binding.mapView.zoomToBoundingBox(bbox, true, 100)
         }
-
         binding.mapView.invalidate()
     }
 }

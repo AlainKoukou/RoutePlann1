@@ -6,10 +6,15 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.univ.routeplanner.data.api.GeocodeResponse
+import com.univ.routeplanner.data.api.RetrofitClient
 import com.univ.routeplanner.data.db.AppDatabase
 import com.univ.routeplanner.data.repository.RouteRepository
 import com.univ.routeplanner.util.NetworkHelper
 import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MainViewModel(
     private val repository: RouteRepository,
@@ -26,6 +31,31 @@ class MainViewModel(
         _currentLocation.value = coords
     }
 
+    fun searchLocation(query: String, onResult: (String?) -> Unit) {
+        // Note: Changed from .instance to .api
+        RetrofitClient.api.searchLocation(query).enqueue(object : Callback<GeocodeResponse> {
+            override fun onResponse(call: Call<GeocodeResponse>, response: Response<GeocodeResponse>) {
+                val feature = response.body()?.features?.firstOrNull()
+                if (feature != null) {
+                    // Ensure geometry and coordinates are not null
+                    val coordsList: List<Double>? = feature.geometry?.coordinates
+                    if (coordsList != null && coordsList.size >= 2) {
+                        val lon = coordsList[0]
+                        val lat = coordsList[1]
+                        onResult("$lon,$lat")
+                    }else {
+                        onResult(null)
+                    }
+                } else {
+                    onResult(null)
+                }
+            }
+
+            override fun onFailure(call: Call<GeocodeResponse>, t: Throwable) {
+                onResult(null)
+            }
+        })
+    }
     fun fetchRoute(destination: String) {
         val origin = _currentLocation.value
 
@@ -87,6 +117,7 @@ class MainViewModel(
             }
         }
     }
+
     fun clearCache() {
         viewModelScope.launch {
             repository.clearCache()
