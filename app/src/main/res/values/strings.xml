@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">Route Planner</string>
+    <string name="welcome_message">Welcome to Route Planner</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="sign_in">Sign In</string>
+    <string name="sign_up_prompt">Don\'t have an account? Sign Up</string>
+    <string name="error_empty_fields">Please enter all required fields</string>
+    <string name="create_account">Create Account</string>
+    <string name="full_name">Full Name</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="already_have_account">Already have an account? Sign In</string>
+    <string name="registration_success">Account created successfully</string>
 </resources>
